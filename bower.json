@@ -1,0 +1,25 @@
+{
+  "name": "adjustable-slideshow",
+  "version": "1.0.0",
+  "description": "Web component that allows for multiple slides of switchable content",
+  "authors": [
+    { "name": "John Murphy-Teixidor", "email": "johnvmt@gmail.com" }
+  ],
+  "license": "MIT",
+  "main": "adjustable-slideshow.html",
+  "dependencies": {
+    "animate.css": "3.5.x"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/johnvmt/adjustable-slideshow.git"
+  },
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
