@@ -5,124 +5,109 @@
 			height: 100%;
 			width: 100%;
 		}
-
-		.displayNone {
-			display: none;
-		}
-
-		a img {
-			width: 100%;
-			height: 100%;
-			-webkit-filter: invert(100%) opacity(75%);
-			filter: invert(100%) opacity(75%);
-		}
-
-		#controls {
-			display: none;
-		}
 	</style>
 	<!--<link rel="stylesheet" type="text/css" href="bower_components/animate.css/animate.min.css">-->
 
 	<div id="container" style="width: 100%; height: 100%; background-color: #333333; overflow: hidden">
-		<div id="controls" style="z-index: 1; position: absolute; top: 0; left: 0;"></div>
+		<!--<div id="controls" style="z-index: 1; position: absolute; top: 0; left: 0;"></div>-->
 		<div id="content" style="z-index: 0; position: absolute; top: 0; left: 0;"><slot></slot></div>
 	</div>
 </template>
 
 <script>
-	class AdjustableSlideshow extends HTMLElement {
+	(function() {
+		let componentDoc =  (document._currentScript || document.currentScript).ownerDocument;
+		let componentDir = componentDoc.baseURI.substring(0, componentDoc.baseURI.lastIndexOf('/'));
+		let componentFile = componentDoc.baseURI.substring(componentDoc.baseURI.lastIndexOf('/') + 1);
+		let componentName = componentFile.substring(0, componentFile.lastIndexOf('.'));
+		class AdjustableSlideshow extends HTMLElement {
+			constructor() {
+				super();
 
-		constructor() {
-			super();
+				let thisElem = this;
 
-			let thisElem = this;
+				// Gets content from <template>
+				let shadow = this.attachShadow({mode: 'open'});
+				let template = componentDoc.querySelector('template[is=adjustable-slideshow]').content;
+				shadow.appendChild(document.importNode(template, true));
 
-			let componentDoc =  (document._currentScript || document.currentScript).ownerDocument;
-			let componentDir = componentDoc.baseURI.substring(0, componentDoc.baseURI.lastIndexOf('/'));
-			let componentFile = componentDoc.baseURI.substring(componentDoc.baseURI.lastIndexOf('/') + 1);
-			let componentName = componentFile.substring(0, componentFile.lastIndexOf('.'));
+				this.elements = {
+					container: shadow.querySelector('slot')
+				};
 
-			// Gets content from <template>
-			let shadow = this.attachShadow({mode: 'open'});
-			let template = componentDoc.querySelector('template[is=adjustable-slideshow]').content;
-			shadow.appendChild(document.importNode(template, true));
+				this.elements.container.addEventListener('slotchange', function() {
+					thisElem.makeTop(thisElem.getAttribute('selected'));
+				});
 
-			this.elements = {
-				container: shadow.querySelector('slot')
-			};
-
-			this.elements.container.addEventListener('slotchange', function(event) {
-				let slideIndex = thisElem.hasAttribute('selected') ? Number(thisElem.getAttribute('selected')) : 0;
-				thisElem.makeTop(slideIndex);
-			});
-
-			this.childFilter = function (node) {
-				return node.nodeName != '#text'; // Exclude whitespace at beginning and end
+				this.childFilter = function (node) {
+					return ['#text', 'DOM-REPEAT'].indexOf(node.nodeName) < 0; // Exclude whitespace at beginning and end
+				}
 			}
 
-			//this.makeTop(this.hasAttribute('selected') ?  : 0);
-		}
+			static get observedAttributes() {
+				return ['selected'];
+			}
 
-		static get observedAttributes() {
-			return ['selected'];
-		}
+			connectedCallback() {
+				let thisElem = this;
+				let elementAttributesDefault = {};
 
-		connectedCallback() {
-			let thisElem = this;
-			let elementAttributesDefault = {};
+				// Add the actions to the buttons (clicking play button plays the video, etc.)
+				//thisElem.addButtonsEventListeners(thisElem._elements.contentContainer, 'data-transport');
+			}
 
-			// Add the actions to the buttons (clicking play button plays the video, etc.)
-			//thisElem.addButtonsEventListeners(thisElem._elements.contentContainer, 'data-transport');
-		}
+			makeTop(slideIndex, mirrorTag) {
+				let thisElem = this;
+				let elements = thisElem.elements.container.assignedNodes();
 
-		makeTop(slideIndex, mirrorTag) {
-			let thisElem = this;
-			let elements = thisElem.elements.container.assignedNodes();
-
-			if(typeof slideIndex != 'number')
-				slideIndex = 0;
-
-			let ctr = 0;
-			elements.forEach(function(element) {
-				if(thisElem.childFilter(element)) {
-					let display = 'none';
-					if(ctr == slideIndex) {
-						display = 'block';
-						if(element.style.display != display) { // Prevent additional triggering when adding a slide
-							thisElem.setAttribute('selected', String(slideIndex));
-							thisElem.emitMirror(mirrorTag, 'makeTop', [slideIndex]);
-						}
+				if(typeof slideIndex != 'number') {
+					try {
+						slideIndex = Number(slideIndex);
 					}
-
-					if(element.style.display != display)
-						element.style.display = display;
-
-					ctr++;
+					catch(error) {
+						slideIndex = 0;
+					}
 				}
-			});
 
+				let ctr = 0;
+				elements.forEach(function(element) {
+					if(thisElem.childFilter(element)) {
+						let display = 'none';
+						if(ctr == slideIndex) {
+							display = 'block';
+							if(element.style.display != display) { // Prevent additional triggering when adding a slide
+								thisElem.setAttribute('selected', String(slideIndex));
+								thisElem.emitMirror(mirrorTag, 'makeTop', [slideIndex]);
+							}
+						}
 
-		};
+						if(element.style.display != display)
+							element.style.display = display;
 
-		emitMirror(mirrorTag, functionName, functionArgs) {
-			if(!Array.isArray(functionArgs))
-				functionArgs = [];
+						ctr++;
+					}
+				});
+			};
 
-			let emitMirrorDetail = {function: functionName, arguments: functionArgs};
-			if(typeof mirrorTag != 'undefined')
-				emitMirrorDetail.tag = mirrorTag;
+			emitMirror(mirrorTag, functionName, functionArgs) {
+				if(!Array.isArray(functionArgs))
+					functionArgs = [];
 
-			let mirrorEvent = new CustomEvent('mirror', {detail: emitMirrorDetail});
-			this.dispatchEvent(mirrorEvent);
+				let emitMirrorDetail = {function: functionName, arguments: functionArgs};
+				if(typeof mirrorTag != 'undefined')
+					emitMirrorDetail.tag = mirrorTag;
 
-		};
+				let mirrorEvent = new CustomEvent('mirror', {detail: emitMirrorDetail});
+				this.dispatchEvent(mirrorEvent);
 
-		// Called when an attribute of this element is added, removed, or updated
-		attributeChangedCallback(attribute, oldVal, newVal) {
-			if(attribute == 'selected' && oldVal != newVal)
-				this.makeTop(Number(newVal));
-		};
-	}
+			};
 
-	customElements.define('adjustable-slideshow', AdjustableSlideshow);
+			attributeChangedCallback(attribute, oldVal, newVal) {
+				if(attribute == 'selected' && oldVal != newVal)
+					this.makeTop(newVal);
+			};
+		}
+
+		customElements.define('adjustable-slideshow', AdjustableSlideshow);
+	})();
 </script>
