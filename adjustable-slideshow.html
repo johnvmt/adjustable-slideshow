@@ -5,6 +5,11 @@
 			height: 100%;
 			width: 100%;
 		}
+
+		::slotted(.adjustable-slideshow-hidden) {
+			display: none;
+		}
+
 	</style>
 	<!--<link rel="stylesheet" type="text/css" href="bower_components/animate.css/animate.min.css">-->
 
@@ -58,7 +63,8 @@
 
 			makeTop(slideIndex, mirrorTag) {
 				let thisElem = this;
-				let elements = thisElem.elements.container.assignedNodes();
+				let elements = thisElem.slotElements();
+				let hiddenClass = 'adjustable-slideshow-hidden';
 
 				if(typeof slideIndex != 'number') {
 					try {
@@ -71,23 +77,33 @@
 
 				let ctr = 0;
 				elements.forEach(function(element) {
-					if(thisElem.childFilter(element)) {
-						let display = 'none';
-						if(ctr == slideIndex) {
-							display = 'block';
-							if(element.style.display != display) { // Prevent additional triggering when adding a slide
-								thisElem.setAttribute('selected', String(slideIndex));
-								thisElem.emitMirror(mirrorTag, 'makeTop', [slideIndex]);
-							}
+					if(ctr == slideIndex) {
+						if(thisElem.hasClass(element, hiddenClass)) {
+							thisElem.removeClass(element, hiddenClass);
+							thisElem.setAttribute('selected', String(slideIndex));
+							thisElem.emitMirror(mirrorTag, 'makeTop', [slideIndex]);
 						}
-
-						if(element.style.display != display)
-							element.style.display = display;
-
-						ctr++;
 					}
+					else
+						thisElem.addClass(element, 'adjustable-slideshow-hidden');
+
+					ctr++;
 				});
 			};
+
+			slotElements(slot) {
+				if(typeof slot == 'undefined')
+					slot = this.elements.container;
+
+				let elements = slot.assignedNodes().filter(function(element) {
+					return ['#text', 'DOM-REPEAT'].indexOf(element.nodeName) < 0; // Exclude whitespace at beginning and end
+				});
+
+				if(elements.length == 1 && elements[0].nodeName == 'SLOT')
+					return this.slotElements(elements[0]);
+				else
+					return elements;
+			}
 
 			emitMirror(mirrorTag, functionName, functionArgs) {
 				if(!Array.isArray(functionArgs))
@@ -106,6 +122,28 @@
 				if(attribute == 'selected' && oldVal != newVal)
 					this.makeTop(newVal);
 			};
+
+			hasClass(el, className) {
+				if(el.classList)
+					return el.classList.contains(className);
+				else
+					return !!el.className.match(new RegExp('(\\s|^)' + className + '(\\s|$)'))
+			}
+
+			addClass(el, className) {
+				if(el.classList)
+					el.classList.add(className);
+				else if(!this.hasClass(el, className)) el.className += " " + className
+			}
+
+			removeClass(el, className) {
+				if(el.classList)
+					el.classList.remove(className);
+				else if(this.hasClass(el, className)) {
+					let reg = new RegExp('(\\s|^)' + className + '(\\s|$)');
+					el.className=el.className.replace(reg, ' ')
+				}
+			}
 		}
 
 		customElements.define('adjustable-slideshow', AdjustableSlideshow);
