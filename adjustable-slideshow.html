@@ -14,8 +14,9 @@
 	<!--<link rel="stylesheet" type="text/css" href="bower_components/animate.css/animate.min.css">-->
 
 	<div id="container" style="width: 100%; height: 100%; background-color: #333333; overflow: hidden">
-		<!--<div id="controls" style="z-index: 1; position: absolute; top: 0; left: 0;"></div>-->
-		<div id="content" style="z-index: 0; position: absolute; top: 0; left: 0;"><slot></slot></div>
+		<div id="content" style="width: 100%; height: 100%; z-index: 0; position: absolute; top: 0; left: 0;">
+			<slot></slot>
+		</div>
 	</div>
 </template>
 
@@ -28,6 +29,8 @@
 		class AdjustableSlideshow extends HTMLElement {
 			constructor() {
 				super();
+
+				this.selected = "0";
 
 				let thisElem = this;
 
@@ -49,16 +52,16 @@
 				}
 			}
 
-			static get observedAttributes() {
-				return ['selected'];
+			get selected() {
+				return this.getAttribute('selected') || '0';
 			}
 
-			connectedCallback() {
-				let thisElem = this;
-				let elementAttributesDefault = {};
+			set selected(val) {
+				return this.setAttribute('selected', val);
+			}
 
-				// Add the actions to the buttons (clicking play button plays the video, etc.)
-				//thisElem.addButtonsEventListeners(thisElem._elements.contentContainer, 'data-transport');
+			static get observedAttributes() {
+				return ['selected'];
 			}
 
 			makeTop(slideIndex, mirrorTag) {
