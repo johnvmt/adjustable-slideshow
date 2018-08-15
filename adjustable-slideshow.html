@@ -93,6 +93,8 @@
 					thisElem.runStep(thisElem.step, thisElem.mode);
 				});
 
+				thisElem.addModeListener();
+
 				// Defer until attributes set so runstep does not execute multiple times
 				setTimeout(function() {
 					thisElem.ready = true;
@@ -129,20 +131,26 @@
 				else if(this.getAttribute('mode') !== passedValue)
 					this.setAttribute('mode', setValue);
 
-				// For internal modes
-				if(typeof this._activeElementModeListener === 'function')
-					this.removeEventListener('element', this._activeElementModeListener);
-
-				if(typeof this.elementModeListeners[setValue] === 'function') {
-					this.addEventListener('element', this.elementModeListeners[setValue]);
-					this._activeElementModeListener = this.elementModeListeners[setValue];
-				}
+				this.addModeListener();
 
 				this.runStep(this.step, this.mode);
 			}
 
 			static get observedAttributes() {
 				return ['step', 'mode'];
+			}
+
+			addModeListener() {
+				const mode = this.mode;
+
+				// For internal modes
+				if(typeof this._activeElementModeListener === 'function')
+					this.removeEventListener('element', this._activeElementModeListener);
+
+				if(typeof mode === 'string' && typeof this.elementModeListeners[mode] === 'function') {
+					this.addEventListener('element', this.elementModeListeners[mode]);
+					this._activeElementModeListener = this.elementModeListeners[mode];
+				}
 			}
 
 			runStep(step, mode, mirrorTag) {
