@@ -5,18 +5,10 @@
 			height: 100%;
 			width: 100%;
 		}
-
-		::slotted(.adjustable-slideshow-hidden) {
-			display: none;
-		}
-
 	</style>
-	<!--<link rel="stylesheet" type="text/css" href="bower_components/animate.css/animate.min.css">-->
 
-	<div id="container" style="width: 100%; height: 100%; background-color: #333333; overflow: hidden">
-		<div id="content" style="width: 100%; height: 100%; z-index: 0; position: absolute; top: 0; left: 0;">
-			<slot></slot>
-		</div>
+	<div id="container" style="width: 100%; height: 100%; overflow: hidden">
+		<slot></slot>
 	</div>
 </template>
 
@@ -30,68 +22,156 @@
 			constructor() {
 				super();
 
-				this.selected = "0";
-
 				let thisElem = this;
 
+				thisElem.ready = false;
+
 				// Gets content from <template>
-				let shadow = this.attachShadow({mode: 'open'});
+				let shadow = thisElem.attachShadow({mode: 'open'});
 				let template = componentDoc.querySelector('template[is=adjustable-slideshow]').content;
 				shadow.appendChild(document.importNode(template, true));
 
-				this.elements = {
+				thisElem.elements = {
 					container: shadow.querySelector('slot')
 				};
 
-				this.elements.container.addEventListener('slotchange', function() {
-					thisElem.makeTop(thisElem.getAttribute('selected'));
+				// subscribe to slide step mode and change styles
+				const activeClass = 'slideshowActiveSlide';
+				const inactiveClass = 'slideshowInactiveSlide';
+
+				thisElem.elementModeListeners = {
+					single: function(event) {
+						let element = event.detail.element;
+						let elementIndex = event.detail.elementIndex;
+						let elements = event.detail.elements;
+						let step = event.detail.step;
+
+						element.style.zIndex = String(elements.length - elementIndex); // Set z-index = (length - elementIndex); first element is top
+
+						// if stack = false: only show active
+						// if stack = true: show elements under active element; hide where elementIndex < activeIndex
+						// if activeIndex = null : hide all
+						if(elementIndex === step) { // Activate
+							if(typeof element.getAttribute('data-slideshow-class-active') === 'string')
+								thisElem.addClass(element, element.getAttribute('data-slideshow-class-active'));
+							if(typeof element.getAttribute('data-slideshow-class-inactive') === 'string')
+								thisElem.removeClass(element, element.getAttribute('data-slideshow-class-inactive'));
+						}
+						else { // Deactivate
+							if(typeof element.getAttribute('data-slideshow-class-active') === 'string')
+								thisElem.removeClass(element, element.getAttribute('data-slideshow-class-active'));
+							if(typeof element.getAttribute('data-slideshow-class-inactive') === 'string')
+								thisElem.addClass(element, element.getAttribute('data-slideshow-class-inactive'));
+						}
+					},
+					stack: function(event) {
+						let element = event.detail.element;
+						let elementIndex = event.detail.elementIndex;
+						let elements = event.detail.elements;
+						let step = event.detail.step;
+
+						element.style.zIndex = String(elements.length - elementIndex); // Set z-index = (length - elementIndex); first element is top
+
+						// if stack = true: show elements under active element; hide where elementIndex < activeIndex
+						// if activeIndex = null : hide all
+						if(elementIndex !== null && elementIndex >= step) {
+							if(typeof element.getAttribute('data-slideshow-class-active') === 'string')
+								thisElem.addClass(element, element.getAttribute('data-slideshow-class-active'));
+							if(typeof element.getAttribute('data-slideshow-class-inactive') === 'string')
+								thisElem.removeClass(element, element.getAttribute('data-slideshow-class-inactive'));
+						}
+						else {
+							if(typeof element.getAttribute('data-slideshow-class-active') === 'string')
+								thisElem.removeClass(element, element.getAttribute('data-slideshow-class-active'));
+							if(typeof element.getAttribute('data-slideshow-class-inactive') === 'string')
+								thisElem.addClass(element, element.getAttribute('data-slideshow-class-inactive'));
+						}
+					}
+				};
+
+				thisElem.elements.container.addEventListener('slotchange', function() {
+					thisElem.runStep(thisElem.step, thisElem.mode);
 				});
 
-				this.childFilter = function (node) {
-					return ['#text', 'DOM-REPEAT'].indexOf(node.nodeName) < 0; // Exclude whitespace at beginning and end
+				// Defer until attributes set so runstep does not execute multiple times
+				setTimeout(function() {
+					thisElem.ready = true;
+					thisElem.runStep(thisElem.step, thisElem.mode);
+				}, 0);
+			}
+
+			get step() {
+				let stringValue = this.getAttribute('step');
+				return (stringValue === null) ? null : Number(stringValue);
+			}
+
+			set step(passedValue) {
+				let setValue = (passedValue === null || typeof passedValue === 'undefined') ? null : Number(passedValue);
+
+				if(setValue === null)
+					this.removeAttribute('step');
+				else
+					this.setAttribute('step', setValue);
+
+				this.runStep(this.step, this.mode);
+			}
+
+			get mode() {
+				let stringValue = this.getAttribute('mode');
+				return (stringValue === null) ? 'single' : stringValue.toLowerCase();
+			}
+
+			set mode(passedValue) {
+				let setValue = (passedValue === null || typeof passedValue !== 'string') ? 'single' : passedValue;
+
+				if(setValue === null)
+					this.removeAttribute('mode');
+				else if(this.getAttribute('mode') !== passedValue)
+					this.setAttribute('mode', setValue);
+
+				// For internal modes
+				if(typeof this._activeElementModeListener === 'function')
+					this.removeEventListener('element', this._activeElementModeListener);
+
+				if(typeof this.elementModeListeners[setValue] === 'function') {
+					this.addEventListener('element', this.elementModeListeners[setValue]);
+					this._activeElementModeListener = this.elementModeListeners[setValue];
 				}
-			}
 
-			get selected() {
-				return this.getAttribute('selected') || '0';
-			}
-
-			set selected(val) {
-				return this.setAttribute('selected', val);
+				this.runStep(this.step, this.mode);
 			}
 
 			static get observedAttributes() {
-				return ['selected'];
+				return ['step', 'mode'];
 			}
 
-			makeTop(slideIndex, mirrorTag) {
-				let thisElem = this;
-				let elements = thisElem.slotElements();
-				let hiddenClass = 'adjustable-slideshow-hidden';
+			runStep(step, mode, mirrorTag) {
+				const thisElem = this;
 
-				if(typeof slideIndex != 'number') {
-					try {
-						slideIndex = Number(slideIndex);
-					}
-					catch(error) {
-						slideIndex = 0;
-					}
+				// For mirroring
+				if(mode !== this.mode)
+					this.mode = mode;
+
+				if(thisElem.ready) {
+					thisElem.emitMirror(mirrorTag, 'runStep', [step, mode]); // Emit mirror event
+
+					let stepEvent = new CustomEvent('step', {detail: step}); // Emit step event
+					thisElem.dispatchEvent(stepEvent);
+
+					const slotElements = thisElem.slotElements(); // Get filtered elements in slot
+
+					slotElements.forEach(function(element, elementIndex) {
+						let eventDetail = {
+							step: step,
+							mode: mode,
+							element: element,
+							elementIndex: elementIndex,
+							elements: slotElements
+						};
+						let elementEvent = new CustomEvent('element', {detail: eventDetail}); // Emit step event
+						thisElem.dispatchEvent(elementEvent);
+					});
 				}
-
-				let ctr = 0;
-				elements.forEach(function(element) {
-					if(ctr == slideIndex) {
-						if(thisElem.hasClass(element, hiddenClass)) {
-							thisElem.removeClass(element, hiddenClass);
-							thisElem.setAttribute('selected', String(slideIndex));
-							thisElem.emitMirror(mirrorTag, 'makeTop', [slideIndex]);
-						}
-					}
-					else
-						thisElem.addClass(element, 'adjustable-slideshow-hidden');
-
-					ctr++;
-				});
 			};
 
 			slotElements(slot) {
@@ -122,8 +202,8 @@
 			};
 
 			attributeChangedCallback(attribute, oldVal, newVal) {
-				if(attribute == 'selected' && oldVal != newVal)
-					this.makeTop(newVal);
+				if(['step', 'mode'].indexOf(attribute) >= 0 && oldVal !== newVal)
+					this[attribute] = newVal;
 			};
 
 			hasClass(el, className) {

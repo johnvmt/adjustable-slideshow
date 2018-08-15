@@ -1,6 +1,6 @@
 {
   "name": "adjustable-slideshow",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "Web component that allows for multiple slides of switchable content",
   "authors": [
     { "name": "John Murphy-Teixidor", "email": "johnvmt@gmail.com" }
@@ -8,7 +8,6 @@
   "license": "MIT",
   "main": "adjustable-slideshow.html",
   "dependencies": {
-    "animate.css": "3.5.x"
   },
   "devDependencies": {},
   "repository": {
