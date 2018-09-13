@@ -183,14 +183,14 @@
 			};
 
 			slotElements(slot) {
-				if(typeof slot == 'undefined')
+				if(typeof slot === 'undefined')
 					slot = this.elements.container;
 
 				let elements = slot.assignedNodes().filter(function(element) {
 					return ['#text', 'DOM-REPEAT'].indexOf(element.nodeName) < 0; // Exclude whitespace at beginning and end
 				});
 
-				if(elements.length == 1 && elements[0].nodeName == 'SLOT')
+				if(elements.length === 1 && elements[0].nodeName === 'SLOT')
 					return this.slotElements(elements[0]);
 				else
 					return elements;
@@ -201,7 +201,7 @@
 					functionArgs = [];
 
 				let emitMirrorDetail = {function: functionName, arguments: functionArgs};
-				if(typeof mirrorTag != 'undefined')
+				if(typeof mirrorTag !== 'undefined')
 					emitMirrorDetail.tag = mirrorTag;
 
 				let mirrorEvent = new CustomEvent('mirror', {detail: emitMirrorDetail});
