@@ -1,6 +1,6 @@
 {
   "name": "adjustable-slideshow",
-  "version": "2.0.1",
+  "version": "2.0.3",
   "description": "Web component that allows for multiple slides of switchable content",
   "private": true,
   "author": {
