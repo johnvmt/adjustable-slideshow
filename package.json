@@ -1,21 +1,16 @@
 {
   "name": "adjustable-slideshow",
-  "version": "2.0.4",
+  "version": "2.1.0",
   "description": "Web component that allows for multiple slides of switchable content",
   "private": true,
   "author": {
     "name": "John Murphy-Teixidor",
     "email": "johnvmt@gmail.com"
   },
-  "devDependencies": {
-  },
-  "dependencies": {
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/johnvmt/adjustable-slideshow.git"
   },
-  "scripts": {
-    "postinstall": "bower install"
-  }
+  "main": "AdjustableSlideshow.js",
+  "module": "AdjustableSlideshow.js"
 }
