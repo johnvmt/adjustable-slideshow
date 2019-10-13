@@ -57,5 +57,10 @@ typings/
 # dotenv environment variables file
 .env
 
+# IntelliJ files
+.idea
+*.iml
+
+# Personal testing files
 test.html
 
